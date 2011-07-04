@@ -1,5 +1,7 @@
-Ola supermercado, todos por aqui!
+<?php
 
-ola ola ole!
+echo "ola supermercado;
 
-Get Spanish!
+
+
+foreach ($ask as ) { }
