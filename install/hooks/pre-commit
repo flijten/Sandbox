@@ -1,0 +1,84 @@
+#!/usr/bin/php
+<?php
+
+
+class CommitCheck
+{
+	const LOC_PHP = '/usr/bin/php';
+
+	const ERROR_SYNTAX = 'Syntax error';
+	const ERROR_WHITESPACE = 'Whitespace error';
+	const ERROR_COMMIT_MESSAGE = 'Commit message error';
+
+	private $errors = array();
+
+	public function checkFiles()
+	{
+		exec('git diff --cached --name-status --diff-filter=ACM', $output, $return);
+
+		foreach ($output as $line) {
+    			$parts = explode ('   ', $line);
+    			$action = trim($line[0]);
+    			$fileName = trim( substr($line, 1, strlen($line) - 1) );
+
+			$this->checkSyntax($fileName);
+			$this->checkWhitespace($fileName);
+		}
+
+		if (!empty($this->errors)) {
+			$c = count($this->errors);
+			echo PHP_EOL . " $c ERRORS FOUND:" . PHP_EOL . PHP_EOL;
+
+			for ($i = 0; $i < count($this->errors); $i++) {
+				$error = $this->errors[$i];
+				switch ($error[0]) {
+					case self::ERROR_SYNTAX:
+					case self::ERROR_WHITESPACE:
+						echo " $i - {$error[0]} in '{$error[1]}': " . PHP_EOL . " 	{$error[2]}" . PHP_EOL;
+						break;
+				}
+			}
+			echo PHP_EOL;
+			exit(1);
+		}
+		exit(0);
+	}
+
+	private function checkSyntax($fileName)
+	{
+		$op = array();
+    		exec('cat ' . $fileName . ' | ' . self::LOC_PHP . ' -l 2>/dev/null', $op, $failed);
+
+		if (!$failed) {
+        		return;
+    		}
+
+    		$this->errors[] = array(self::ERROR_SYNTAX, $fileName, $op[1]);
+	}
+
+	private function checkWhitespace($fileName)
+	{
+		$i = 0;
+		$content = file_get_contents($fileName);
+
+		foreach (preg_split('/\n/', $content, -1) as $line) {
+			// check for trailing spaces.
+			$i++;
+			if (strlen($line) > 0) {
+				$line = preg_replace('/\r/', '', $line);
+				if (preg_match('/(\s+$)/', $line)) {
+					$errorMessage = $fileName . ' has trailing spaces in line ' . $i;
+					$this->errors[] = array(self::ERROR_WHITESPACE, $fileName, $errorMessage);
+				}
+			}
+		}
+
+		if (preg_match('/(\?>\s+$)/', $content)) {
+			$errorMessage = $fileName . ' has invalid file ending. End with "?>" or with non-php content. Do not end with empty lines or spaces.';
+			$this->errors[] = array(self::ERROR_WHITESPACE, $fileName, $errorMessage);
+		}
+	}
+}
+
+$Checker = new CommitCheck();
+$Checker->checkFiles();

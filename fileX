@@ -3,6 +3,10 @@
 $a = '';
 
 
+$b = 'x';
+
+
+
 foreach ($ask as $a ) { }
 
 $syntaxError = 'a';

@@ -1,0 +1,63 @@
+#!/usr/bin/php
+<?php
+
+
+class CommitCheck
+{
+	const LOC_PHP = '/usr/bin/php';
+
+	const ERROR_COMMIT_MESSAGE = 'Commit message error';
+
+	private $errors = array();
+
+	public function runChecks($commitMessageFileName)
+	{
+		$message = file_get_contents($commitMessageFileName);
+		$this->checkMessage($message);
+
+		if (!empty($this->errors)) {
+			$c = count($this->errors);
+			echo PHP_EOL . " $c ERRORS FOUND:" . PHP_EOL . PHP_EOL;
+
+			for ($i = 0; $i < count($this->errors); $i++) {
+				$error = $this->errors[$i];
+				echo " $i - {$error[0]}: '{$error[1]}': " . PHP_EOL;
+			}
+			echo PHP_EOL;
+			exit(1);
+		}
+		exit(0);
+	}
+
+	private function checkMessage($message)
+	{
+		if (strlen($message) < 10) {
+			$errorMessage = 'A commit must be annotated by a prefixed message of at least ten characters';
+			$this->errors[] = array(self::ERROR_COMMIT_MESSAGE, $errorMessage);
+		}
+		foreach (preg_split('/\v/', $message, -1, PREG_SPLIT_NO_EMPTY) as $line) {
+			// Read first 3 chars of line
+			if ($line[0] == '#') {
+				continue;
+			}
+			$verb = substr($line, 0, 3);
+
+			$allowed = array('ADD', 'FIX', 'CHG', 'OPT', 'DOC', 'REM', 'MRG', 'MOV', 'CPY');
+
+			if (!in_array($verb, $allowed)) {
+				$errorMessage = '"' . $verb . '" is not a valid prefix for commit messages. Use only ADD, FIX, CHG, OPT, DOC, REM, MRG, MOV or CPY';
+				$this->errors[] = array(self::ERROR_COMMIT_MESSAGE, $errorMessage);
+			}
+
+			$message = substr($line, 3);
+			preg_match('/^\s*[\-:]/', $message, $matches);
+			if (empty($matches)) {
+				$errorMessage = 'A commit message must exist of a three letter code, a - or : followed by the actual message. The - or : is missing while it is required';
+				$this->errors[] = array(self::ERROR_COMMIT_MESSAGE, $errorMessage);
+			}
+		}
+	}
+}
+
+$Checker = new CommitCheck();
+$Checker->runChecks($argv[1]);
