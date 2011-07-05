@@ -1,7 +1,8 @@
 <?php
 
-echo "ola supermercado;
 
 
 
-foreach ($ask as ) { }
+foreach ($ask as $a ) { }
+
+$syntaxError = 'a';
